@@ -138,7 +138,7 @@ def test_dbscan(data_path):
 
 data_path   = os.listdir(charact_vec_path)
 show_n_cluster_calculation  = False
-show_clustring_for_2VC      = True
+show_clustring_for_2VC      = False
 test_kmeans(data_path, show_n_cluster_calculation, show_clustring_for_2VC)
 # test_dbscan(matrixes_path)
     
