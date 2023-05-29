@@ -6,7 +6,8 @@ import cv2
 from skimage.feature import local_binary_pattern
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import MinMaxScaler
-
+import random
+random.seed(42)
 np.random.seed(42)
 
 cwd = os.getcwd()

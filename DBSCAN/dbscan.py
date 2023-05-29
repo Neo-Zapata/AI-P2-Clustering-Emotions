@@ -1,5 +1,5 @@
 import numpy as np
-from Plotting.Dim_red_comparison import dim_reduction_methods_comparison
+from Plotting.Dim_red_comparison import dim_reduction_methods_comparison_dbscan
 
 
 class DBSCAN:
@@ -15,8 +15,6 @@ class DBSCAN:
             return np.linalg.norm(v2-v1)
         elif self.distance_metric == 'manhattan':
             return np.sum(np.abs(v2 - v1))
-        # elif self.distance_metric == 'cosine':
-        #     return cosine(v2, v1)
         else:
             raise Exception("Distance metric not valid.")
 
@@ -64,23 +62,9 @@ class DBSCAN:
                 neighbors_copy.extend(new_neighbors)
                 neighbors_copy = list(set(neighbors_copy))
                 neighbors_copy.remove(neighbor)
+        
+        return self.labels, self.n_cluster
 
 
-    # def propagate(self, neighbors):
-    #     for neighbor in neighbors:
-    #         if self.labels[neighbor] == -1: # if undefined
-    #             self.labels[neighbor] = self.n_cluster # add it to the cluster
-    #         elif self.labels[neighbor] == 0: # if noise
-    #             self.labels[neighbor] = self.n_cluster # add it to the cluster
-    #             new_neighbors = []
-    #             for j, other_point in enumerate(self.data):
-    #                 if self.distance(self.data[neighbor], other_point) <= self.eps:
-    #                     new_neighbors.append(j)
-    #             if len(new_neighbors) >= self.minPts:
-    #                 neighbors.extend(new_neighbors)
-    #     return neighbors
-
-
-    def plot_(self):
-        print(self.labels)
-        dim_reduction_methods_comparison(self.data, self.labels)
+    def plot_(self, k , path):
+        dim_reduction_methods_comparison_dbscan(self.data, self.labels, k , path)

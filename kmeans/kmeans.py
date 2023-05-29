@@ -1,8 +1,10 @@
 import numpy as np
 from Plotting.Dim_red_comparison import dim_reduction_methods_comparison
-
-
+import random
+random.seed(42)
 np.random.seed(42)
+
+
 
 emotions = ['anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness', 'surprise']
 

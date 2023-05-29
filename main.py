@@ -10,7 +10,8 @@ warnings.filterwarnings('ignore')
 from sklearn.metrics.pairwise import pairwise_distances
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score, confusion_matrix, completeness_score, jaccard_score
 from sklearn.metrics.cluster import rand_score
-
+import random
+random.seed(42)
 
 
 np.random.seed(42)
@@ -46,6 +47,35 @@ def test_kmeans(files, save_plots):
             kmean_vc = Kmeans(i, data, initialization_method[1], distance_metric[1], convergence_criterion[0], file, save_plots)
             kmean_vc.fit()
             metrics_evaluation(distances, kmean_vc.labels, file, i, data)
+
+
+def test_gmm(files, save_plots):
+    pass
+
+
+def test_dbscan(files, save_plots):
+# traverse each .csv
+    rad = [50, 180, 200, 250]
+    minPts = 4
+    i = 1
+    for file in files: 
+        print(f"\n------------------------------- {file} -------------------------------")
+        data_path   = charact_vec_path + "/" + file
+
+        # get data
+        data        = np.loadtxt(data_path, delimiter=',')
+        dbscan = DBSCAN(data, rad[3], minPts, distance_metric[1], save_plots)
+        dbscan.fit()
+        labels = list(set(dbscan.labels))
+        dbscan.plot_(i, file)
+        if(len(labels) > 1):
+            print(f"Se formaron {dbscan.n_cluster} clusters.")
+            metrics_evaluation_dbscan(dbscan.labels, data)
+        else:
+            print(f"Se formaron {dbscan.n_cluster} clusters. Por lo que, no fue posible realizar el calculo de las metricas.")
+        i += 1
+
+
 
 def metrics_evaluation(distances, labels, file, k, data):
     plt.clf()
@@ -94,6 +124,38 @@ def metrics_evaluation(distances, labels, file, k, data):
     os.makedirs(save_dir, exist_ok=True)
     plt.savefig(save_dir + f'/kmeans_{k}_cluster.png')
     plt.close()
+
+def metrics_evaluation_dbscan(labels, data):
+    plt.clf()
+    plt.close()
+
+    # Evaluate clustering using different metrics
+    silhouette = silhouette_score(data, labels)
+    calinski_harabasz = calinski_harabasz_score(data, labels)
+    davies_bouldin = davies_bouldin_score(data, labels)
+    rand = rand_score(real_labels, labels)
+    jaccard = jaccard_score(real_labels, labels, average='weighted')
+    confusion_mat = confusion_matrix(real_labels, labels)
+    purity = np.sum(np.amax(confusion_mat, axis=0)) / np.sum(confusion_mat)
+    completeness = completeness_score(real_labels, labels)
+
+    silhouette_metric = "BAD" if silhouette < 0.9 else "GOOD"
+    rand_metric = "BAD" if rand < 0.9 else "GOOD"
+    jaccard_metric = "BAD" if jaccard < 0.9 else "GOOD"
+    purity_metric = "BAD" if purity < 0.9 else "GOOD"
+    completeness_metric = "BAD" if completeness < 0.9 else "GOOD"
+
+    # Print the evaluation metrics
+    print(f"Silhouette Coefficient: [-1 to 1]                            {round(silhouette, 3)}     [{silhouette_metric}]")
+    print(f"Calinski-Harabasz Index: [the higher the better]             {round(calinski_harabasz, 3)}")
+    print(f"Davies-Bouldin Index: [0 to INF] - lower values are better   {round(davies_bouldin, 3)}")
+    print(f"Rand Index: [-INF to 1]                                      {round(rand, 3)}     [{rand_metric}]")
+    print(f"Jaccard Coefficient: [0 to 1]                                {round(jaccard, 3)}     [{jaccard_metric}]")
+    print(f"Purity: [0 to 1]                                             {round(purity, 3)}     [{purity_metric}]")
+    print(f"Completitud: [0 to 1]                                        {round(completeness, 3)}     [{completeness_metric}]")
+
+    # ----------------------------------------------------------------------
+
 
 
 def get_n_cluster_k_means(data, file):
@@ -147,24 +209,16 @@ def get_n_cluster_k_means(data, file):
 
 
 
-def test_dbscan(data_path):
-    rad     = 200
-    minPts  = 4
-    for path in data_path: # traverse each .csv
-    # print(f"------------------------------- {path} -------------------------------")
-        data = np.loadtxt(charact_vec_path + "/" + path, delimiter=',')
-        dbscan_vc = DBSCAN(data, rad, minPts, distance_metric[0], False)
-        dbscan_vc.fit()
-        if path == '2_VC.csv':
-            dbscan_vc.plot_()
-
-
-
-
 
 csvs   = os.listdir(charact_vec_path)
 savel_plots                 = True
+
+print("\n------------------------- TESTING K-MEANS ---------------------------\n")
 test_kmeans(csvs, savel_plots)
-# test_dbscan(matrixes_path)
+print("\n------------------------- TESTING DBSCAN ---------------------------\n")
+test_dbscan(csvs, savel_plots)
+print("\n------------------------- TESTING GMM ---------------------------\n")
+test_gmm(csvs, savel_plots)
+print("\n Todos los plots generados pueden ubicarse en la carpeta 'images' \n")
     
 
