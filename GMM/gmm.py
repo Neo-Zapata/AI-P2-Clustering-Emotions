@@ -1,84 +1,95 @@
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.neighbors import KDTree
-from sklearn.datasets import load_iris
-from sklearn import neighbors
-from sklearn.cluster import KMeans
-from scipy import stats
 import numpy as np
+from sklearn.mixture import GaussianMixture
+from scipy.stats import multivariate_normal
 import matplotlib.pyplot as plt
-import pandas as pd
+from matplotlib.patches import Ellipse
 
-import math
-     
+class GMM:
+    def __init__(self, n_clusters, max_epochs, convergence_threshold, data, file):
+        self.n_clusters = n_clusters
+        self.max_epochs = max_epochs
+        self.convergence_threshold = convergence_threshold
+        self.data = data
+        self.file = file
+        self.centers = None
+        self.covs = None
+        self.weights = None
+        self.responsibilities = None
 
-# Se carga el dataset
+    def fit_(self, X):
+        gmm = GaussianMixture(n_components=self.n_clusters)
+        gmm.fit(X)
+        self.centers = gmm.means_
+        self.covs = gmm.covariances_
+        self.weights = gmm.weights_
 
-iris = load_iris()
+        # EM algorithm
+        prev_log_likelihood = None
+        for epoch in range(self.max_epochs):
+            print("EPOCH", epoch)
 
-X = iris.data[:,2:]
-Y = iris.target.reshape(-1, 1)
+            # E-step
+            log_likelihood, responsibilities = self._e_step(X)
 
-scaler = MinMaxScaler()
-X = scaler.fit_transform(X)
+            # Check convergence
+            if prev_log_likelihood is not None and np.abs(log_likelihood - prev_log_likelihood) < self.convergence_threshold:
+                break
 
+            # M-step
+            self._m_step(X, responsibilities)
 
-     
+            prev_log_likelihood = log_likelihood
 
-# Modelo
-def gauss(X, clusters=3):
-  # KMeans
-  kmeans = KMeans(n_clusters=clusters, n_init="auto").fit(X)
-  labels = kmeans.labels_
-  centers = kmeans.cluster_centers_
-  covs = []
-  for i in range(clusters):
-    covs.append(np.cov(X[labels==i].T))
+    def _e_step(self, X):
+        likelihood = np.zeros([X.shape[0], self.n_clusters])
+        for i in range(self.n_clusters):
+            multi_normal = multivariate_normal(self.centers[i], self.covs[i])
+            likelihood[:, i] = multi_normal.pdf(X)
 
-  covs = np.array(covs)
+        likelihood *= self.weights
 
-  pi = np.array([(labels==i).sum() for i in range(clusters)]) / len(labels)
+        responsibilities = likelihood / likelihood.sum(axis=1, keepdims=True)
+        responsibilities = np.nan_to_num(responsibilities, nan=1e-8)
 
-  return centers, covs, pi
+        log_likelihood = np.log(likelihood.sum(axis=1)).sum()
 
+        self.responsibilities = responsibilities
+        
+        return log_likelihood, responsibilities
 
-def EM(X, centers, covs, pi):
-  for epoch in range(100): # Se eligen 100 epochs
-    if epoch % 50 == 0:
-      print("EPOCH", epoch)
+    def _m_step(self, X, responsibilities):
+        N = responsibilities.sum(axis=0)
 
+        for i in range(self.n_clusters):
+            resp_col = responsibilities[:, i].reshape(-1, 1)
+            self.centers[i] = np.sum(resp_col * X, axis=0) / N[i]
+            dif = X - self.centers[i]
+            self.covs[i] = np.dot((resp_col * dif).T, dif) / N[i]
 
-  # Cálculo de likelihood
-  likelihood = np.zeros([X.shape[0], len(pi)])
+        self.weights = N / X.shape[0]
 
-  for i in range(len(pi)):
-    multi_normal = stats.multivariate_normal(centers[i], covs[i])
-    for j in range(X.shape[0]):
-      likelihood[j][i] = multi_normal.pdf(X[j])
-  
-  for i in range(len(pi)):
-    likelihood[:,i] *= pi[i]
+    def plot(self, X):
+        # Plot data points
+        plt.scatter(X[:, 0], X[:, 1], c=self.responsibilities.argmax(axis=1))
 
-  y = likelihood/likelihood.sum(1)[:,None]
+        # Plot cluster centers
+        plt.scatter(self.centers[:, 0], self.centers[:, 1], c='red', marker='x', label='Cluster Centers')
 
-  N = y.sum(0)
-  for i in range(len(pi)):
-    y_col = y[:, i].reshape(-1,1)
-    centers[i] = np.sum(y_col*X, 0) / N[i]
-    dif = X - centers[i]
-    covs[i] = np.dot((y_col * dif).T, dif) 
-    covs[i] /= N[i]
+        # Plot ellipses for covariance matrices
+        for i in range(self.n_clusters):
+            cov = self.covs[i]
+            center = self.centers[i]
+            eigenvalues, eigenvectors = np.linalg.eigh(cov)
 
-  pi = N/X.shape[0] 
+            angle = np.degrees(np.arctan2(eigenvectors[1, 0], eigenvectors[0, 0]))
+            width = 2 * np.sqrt(2 * eigenvalues[0])
+            height = 2 * np.sqrt(2 * eigenvalues[1])
 
-  return centers, covs, pi, y
+            ellipse = Ellipse(center, width, height, angle, edgecolor='r', facecolor='none')
+            plt.gca().add_patch(ellipse)
 
-  
-     
-
-centers, covs, pi = gauss(X)
-centers, covs, pi, y = EM(X, centers, covs, pi)
-
-labels = np.argmax(y, 1)
-
-print(labels.reshape(-1))
-print(Y.reshape(-1))
+        plt.xlabel('Feature 1')
+        plt.ylabel('Feature 2')
+        plt.title('GMM Clustering Results')
+        plt.legend()
+        plt.show()

@@ -1,6 +1,7 @@
 from image_processing.image_processing import process_dataset, get_real_labels
 from kmeans.kmeans import Kmeans
 from DBSCAN.dbscan import DBSCAN
+from GMM.gmm import GMM
 import numpy as np
 import os
 import warnings
@@ -49,8 +50,18 @@ def test_kmeans(files, save_plots):
             metrics_evaluation(distances, kmean_vc.labels, file, i, data)
 
 
-def test_gmm(files, save_plots):
-    pass
+def test_gmm(data_path):
+    clusters = 6
+    epochs = 100
+    convergence_threshold = 1e-4
+    for path in data_path: # traverse each .csv
+        if path != "wavelet_feature_vectors_of__981.csv":
+            print(f"------------------------------- {path} -------------------------------")
+            data = np.loadtxt(charact_vec_path + "/" + path, delimiter=',')
+            gmm = GMM(clusters, epochs, convergence_threshold, data, path)
+            gmm.fit_(data)
+            gmm.plot(data)
+
 
 
 def test_dbscan(files, save_plots):
@@ -218,7 +229,7 @@ test_kmeans(csvs, savel_plots)
 print("\n------------------------- TESTING DBSCAN ---------------------------\n")
 test_dbscan(csvs, savel_plots)
 print("\n------------------------- TESTING GMM ---------------------------\n")
-test_gmm(csvs, savel_plots)
+test_gmm(csvs)
 print("\n Todos los plots generados pueden ubicarse en la carpeta 'images' \n")
     
 
