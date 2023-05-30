@@ -39,6 +39,7 @@ class GMM:
             self._m_step(X, responsibilities)
 
             prev_log_likelihood = log_likelihood
+        print(log_likelihood)
 
     def _e_step(self, X):
         likelihood = np.zeros([X.shape[0], self.n_clusters])
